@@ -1,0 +1,796 @@
+# @ts-result - Complete LLM Documentation
+
+**@ts-result** is a TypeScript library providing Rust-inspired `Result<T, E>` and `Option<T>` types for type-safe error handling with universal pattern matching. This document provides comprehensive API reference, examples, and best practices for AI code assistants.
+
+## Library Overview
+
+A modern, zero-dependency TypeScript library (8 KB minified, 1.8 KB gzipped) that makes error handling explicit and composable. Inspired by Rust's Result and Option types, it provides a type-safe alternative to try/catch and null/undefined handling with ~50x better performance for error cases.
+
+### Core Philosophy
+
+1. **Explicit Error Handling**: Errors are values, not exceptions
+2. **Type Safety**: Full TypeScript inference and type guards
+3. **Composability**: Chain operations without nesting
+4. **Pattern Matching**: Universal matching for any type
+5. **Async Support**: Native Promise integration
+
+## Type System
+
+### Result\<T, E>
+
+A discriminated union type representing either a successful value (Ok) or an error (Err).
+
+```typescript
+type Result<T, E> = Ok<T, E> | Err<T, E>
+
+class Ok<T, E> {
+  readonly _: 'ok' = 'ok'
+  constructor(public readonly value: T)
+}
+
+class Err<T, E> {
+  readonly _: 'err' = 'err'
+  constructor(public readonly error: E)
+}
+```
+
+**Discriminant**: The `_` property ('ok' | 'err') enables TypeScript type narrowing in control flow.
+
+### Option\<T>
+
+A discriminated union type representing either a present value (Some) or absence (None).
+
+```typescript
+type Option<T> = Some<T> | None<T>
+
+class Some<T> {
+  readonly _: 'some' = 'some'
+  constructor(public readonly value: T)
+}
+
+class None<T> {
+  readonly _: 'none' = 'none'
+}
+```
+
+## Complete API Reference
+
+### Result\<T, E> Methods
+
+#### State Inspection
+
+```typescript
+isOk(): this is Ok<T, E>
+isErr(): this is Err<T, E>
+```
+
+- Returns `true` or `false` with proper type narrowing
+- Can be used in if statements for TypeScript control flow
+- Example: `if (result.isOk()) { result.value }`
+
+#### Value Extraction
+
+```typescript
+unwrap(): T
+unwrapOr(defaultValue: T): T
+unwrapOrElse(fn: (error: E) => T): T
+expect(message: string): T
+```
+
+- `unwrap()`: Throws Error if Err
+- `unwrapOr(default)`: Returns value or default
+- `unwrapOrElse(fn)`: Returns value or computes default from error
+- `expect(message)`: Throws Error with custom message if Err
+
+#### Transformation
+
+```typescript
+map<U>(fn: (value: T) => U): Result<U, E>
+mapErr<F>(fn: (error: E) => F): Result<T, F>
+```
+
+- `map()`: Transforms Ok value, passes through Err
+- `mapErr()`: Transforms Err error, passes through Ok
+
+#### Chaining
+
+```typescript
+andThen<U>(fn: (value: T) => Result<U, E>): Result<U, E>
+orElse<F>(fn: (error: E) => Result<T, F>): Result<T, F>
+and<U>(other: Result<U, E>): Result<U, E>
+or<F>(other: Result<T, F>): Result<T, F>
+```
+
+- `andThen()`: Chains function returning Result on Ok
+- `orElse()`: Chains function returning Result on Err
+- `and()`: Combines, returns second if both Ok
+- `or()`: Combines, returns first if Ok
+
+#### Option Conversion
+
+```typescript
+ok(): Option<T>
+err(): Option<E>
+```
+
+- `ok()`: Returns Some(value) if Ok, None if Err
+- `err()`: Returns None if Ok, Some(error) if Err
+
+#### Pattern Matching
+
+```typescript
+match<U>(pattern: { ok: (value: T) => U, err: (error: E) => U }): U
+```
+
+- Takes object with ok and err handlers
+- Returns result of matching handler
+- Both handlers must return same type U
+
+#### Async Methods
+
+```typescript
+asyncThen<U>(fn: (value: T) => Promise<Result<U, E>>): Promise<Result<U, E>>
+asyncOrElse<F>(fn: (error: E) => Promise<Result<T, F>>): Promise<Result<T, F>>
+```
+
+- Async versions of `andThen` and `orElse`
+- Return Promise wrapping the Result
+
+### Option\<T> Methods
+
+#### State Inspection
+
+```typescript
+isSome(): this is Some<T>
+isNone(): this is None<T>
+```
+
+#### Value Extraction
+
+```typescript
+unwrap(): T
+unwrapOr(defaultValue: T): T
+unwrapOrElse(fn: () => T): T
+expect(message: string): T
+```
+
+#### Transformation
+
+```typescript
+map<U>(fn: (value: T) => U): Option<U>
+mapOr<U>(defaultValue: U, fn: (value: T) => U): U
+mapOrElse<U>(defaultFn: () => U, fn: (value: T) => U): U
+```
+
+- `map()`: Transforms Some value, passes through None
+- `mapOr()`: Transforms or returns default
+- `mapOrElse()`: Transforms or computes default
+
+#### Chaining
+
+```typescript
+andThen<U>(fn: (value: T) => Option<U>): Option<U>
+or(opt: Option<T>): Option<T>
+orElse(fn: () => Option<T>): Option<T>
+```
+
+#### Pattern Matching
+
+```typescript
+match<U>(pattern: { some: (value: T) => U, none: () => U }): U
+```
+
+### Match Function
+
+#### Basic Signature
+
+```typescript
+function match<T>(value: T): Matcher<T>
+function match<T>(value: T, options: MatchOptions): Matcher<T>
+```
+
+#### Matcher Methods
+
+```typescript
+class Matcher<T, R = unknown> {
+  when<U extends T>(
+    predicate: (value: T, p: Predicates) => boolean | Promise<boolean>,
+    handler: (value: U) => R | Promise<R>
+  ): this
+
+  default(handler: (value: T) => R | Promise<R>): R | Promise<R>
+
+  orElse(result: R): R | Promise<R>
+}
+```
+
+- `when()`: Adds a predicate/handler pair
+- `default()`: Executes if no predicates match
+- `orElse()`: Returns fallback if no predicates match
+
+#### MatchOptions
+
+```typescript
+interface MatchOptions {
+  execution?: 'parallel' | 'sequential'  // default: 'parallel'
+  predicates?: Partial<Predicates>
+}
+```
+
+- `execution`: 'parallel' = all async predicates run simultaneously, 'sequential' = predicates run in order
+- `predicates`: Extend or override built-in predicates
+
+### Built-in Predicates
+
+```typescript
+interface Predicates {
+  // Type guards
+  isString: (val: unknown) => val is string
+  isNumber: (val: unknown) => val is number
+  isBoolean: (val: unknown) => val is boolean
+  isNull: (val: unknown) => val is null
+  isUndefined: (val: unknown) => val is undefined
+  isNil: (val: unknown) => val is null | undefined
+  isArray: <T = unknown>(val: unknown) => val is T[]
+  isFunction: (val: unknown) => val is (...args: never[]) => unknown
+  isObject: (val: unknown) => val is object
+  isPromise: (val: unknown) => val is Promise<unknown>
+  isDate: (val: unknown) => val is Date
+  isRegExp: (val: unknown) => val is RegExp
+
+  // Result/Option guards
+  isOk: <T, E>(val: unknown) => val is Result<T, E>
+  isErr: <T, E>(val: unknown) => val is Result<T, E>
+  isSome: <T>(val: unknown) => val is Option<T>
+  isNone: <T>(val: unknown) => val is Option<T>
+
+  // Utility predicates
+  isTruthy: (val: unknown) => boolean
+  isFalsy: (val: unknown) => boolean
+  isEmpty: (val: unknown) => boolean
+}
+```
+
+### Constructor Functions
+
+```typescript
+// Result
+function ok<T, E = never>(value: T): Result<T, E>
+function err<T = never, E>(error: E): Result<T, E>
+
+// Option
+function some<T>(value: T): Option<T>
+function none<T>(): Option<T>
+```
+
+### Utility Functions
+
+```typescript
+// Result utilities
+function tryCatch<T, E = Error>(fn: () => T): Result<T, E>
+function all<T, E>(results: Result<T, E>[]): Result<T[], E>
+function any<T, E>(results: Result<T, E>[]): Result<T, E>
+
+// Option utilities
+function fromNullable<T>(value: T | null | undefined): Option<T>
+function toNullable<T>(option: Option<T>): T | null
+function fromArray<T>(array: T[]): Option<[T, ...T[]]>
+function toArray<T>(option: Option<T>): T[]
+
+// Async utilities
+function fromPromise<T, E>(
+  promise: Promise<T>,
+  errorMapper: (error: unknown) => E
+): Promise<Result<T, E>>
+function toPromise<T, E>(result: Promise<Result<T, E>>): Promise<T>
+function toPromiseOr<T, E>(
+  result: Promise<Result<T, E>>,
+  defaultValue: T
+): Promise<T>
+```
+
+## Comprehensive Examples
+
+### Example 1: REST API Client
+
+```typescript
+import { ok, err, fromPromise } from '@ts-result'
+
+type ApiError =
+  | { type: 'network', message: string, statusCode?: number }
+  | { type: 'parse', message: string }
+  | { type: 'not_found', resource: string, id: string }
+
+async function fetchUser(id: string): Promise<Result<User, ApiError>> {
+  const response = await fromPromise(
+    fetch(`/api/users/${id}`),
+    error => ({ type: 'network', message: error.message })
+  )
+
+  return response
+    .andThen(async (res) => {
+      if (!res.ok) {
+        return err({
+          type: 'not_found',
+          resource: 'user',
+          id
+        })
+      }
+
+      return fromPromise(
+        res.json(),
+        error => ({ type: 'parse', message: error.message })
+      )
+    })
+    .andThen(validateUser)
+}
+
+// Usage
+const result = await fetchUser('123')
+result.match({
+  ok: (user) => console.log(`Hello, ${user.name}`),
+  err: (error) => console.error(`Failed (${error.type}): ${error.message}`)
+})
+```
+
+### Example 2: Form Validation
+
+```typescript
+import { ok, err, all } from '@ts-result'
+
+type ValidationError = { field: string, message: string }
+
+function validateEmail(email: string): Result<string, ValidationError> {
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return regex.test(email)
+    ? ok(email)
+    : err({ field: 'email', message: 'Invalid email format' })
+}
+
+function validatePassword(password: string): Result<string, ValidationError> {
+  return password.length >= 8
+    ? ok(password)
+    : err({ field: 'password', message: 'Must be at least 8 characters' })
+}
+
+function validateAge(age: number): Result<number, ValidationError> {
+  return age >= 18 && age <= 120
+    ? ok(age)
+    : err({ field: 'age', message: 'Must be between 18 and 120' })
+}
+
+function validateForm(form: { email: string; password: string; age: number }): Result<{ email: string; password: string; age: number }, ValidationError[]> {
+  const results = [validateEmail(form.email), validatePassword(form.password), validateAge(form.age)]
+  return all(results).mapErr((errors) => errors.filter((e): e is ValidationError => e !== undefined))
+}
+
+// Usage
+const result = validateForm({ email: 'user@example.com', password: 'secure123', age: 25 })
+if (result.isOk()) {
+  submitForm(result.value)
+} else {
+  displayErrors(result.error)
+}
+```
+
+### Example 3: File Operations
+
+```typescript
+import { ok, err, fromPromise, tryCatch } from '@ts-result'
+
+type FsError = { type: 'not_found' | 'permission', path: string, message: string }
+
+async function readConfig(path: string): Promise<Result<string, FsError>> {
+  const exists = tryCatch(() => {
+    const fs = require('fs')
+    fs.accessSync(path)
+    return true
+  })
+
+  if (exists.isErr()) {
+    return err({ type: 'not_found', path, message: 'File not found' })
+  }
+
+  return fromPromise(
+    require('fs/promises').readFile(path, 'utf-8'),
+    error => ({ type: 'permission', path, message: error.message })
+  )
+}
+
+async function parseConfig(content: string): Promise<Result<Config, Error>> {
+  return Promise.resolve(
+    tryCatch(() => {
+      const data = JSON.parse(content)
+      return validateConfig(data)
+    })
+  )
+}
+
+// Combined pipeline
+async function loadConfig(path: string): Promise<Result<Config, FsError | Error>> {
+  return readConfig(path)
+    .andThen(parseConfig)
+    .mapErr((e: any) => {
+      if (e.type) return e  // FsError
+      return { type: 'permission', path, message: e.message }
+    })
+}
+```
+
+### Example 4: Database Operations
+
+```typescript
+import { ok, err, fromPromise } from '@ts-result'
+
+type DbError = { code: string, message: string }
+
+class UserRepository {
+  async findById(id: string): Promise<Result<User, DbError>> {
+    return fromPromise(
+      db.query('SELECT * FROM users WHERE id = ?', [id]),
+      error => ({ code: 'DB_ERROR', message: error.message })
+    ).andThen(rows => {
+      return rows.length > 0 ? ok(rows[0]) : err({ code: 'NOT_FOUND', message: `User ${id} not found` })
+    })
+  }
+
+  async create(user: NewUser): Promise<Result<User, DbError>> {
+    return fromPromise(
+      db.query('INSERT INTO users SET ?', [user]),
+      error => ({ code: 'DB_ERROR', message: error.message })
+    ).andThen(result => this.findById(result.insertId))
+  }
+
+  async update(id: string, updates: Partial<User>): Promise<Result<User, DbError>> {
+    return this.findById(id)
+      .andThen(async (existing) => {
+        const updated = { ...existing, ...updates }
+        return fromPromise(
+          db.query('UPDATE users SET ? WHERE id = ?', [updates, id]),
+          error => ({ code: 'DB_ERROR', message: error.message })
+        ).andThen(() => ok(updated))
+      })
+  }
+}
+```
+
+### Example 5: Match Patterns
+
+```typescript
+import { match, predicates as p } from '@ts-result'
+
+// Basic type matching
+const result1 = match(42)
+  .when((v, p) => p.isNumber(v), n => n * 2)
+  .when((v, p) => p.isString(v), s => s.length)
+  .default(() => 0)
+
+// Async predicates with parallel execution
+const result2 = await match(userData, { execution: 'parallel' })
+  .when(async (v, p) => {
+    const exists = await db.userExists(v.id)
+    return exists && p.isObject(v)
+  }, (v) => v.id)
+  .when(async (v, p) => await validateEmail(v.email), (v) => v.email)
+  .default(() => 'guest')
+
+// Custom predicates
+interface User {
+  id: number
+  name: string
+}
+
+match(data, {
+  predicates: {
+    isUser: (v: unknown): v is User =>
+      typeof v === 'object' && v !== null && 'id' in v && 'name' in v
+  }
+})
+  .when((v, p) => p.isUser(v), user => user.name)
+  .when((v, p) => p.isNil(v), () => 'guest')
+  .default(() => 'unknown')
+```
+
+### Example 6: Caching Layer
+
+```typescript
+import { ok, err, match, fromPromise } from '@ts-result'
+
+interface CacheEntry<T> {
+  data: T
+  timestamp: number
+  ttl: number
+}
+
+class Cache<T, E> {
+  constructor(private store: Map<string, CacheEntry<T>>) {}
+
+  get(key: string): Result<T, E> {
+    const entry = this.store.get(key)
+    if (!entry) return err({ type: 'miss' } as E)
+    if (Date.now() - entry.timestamp > entry.ttl) {
+      this.store.delete(key)
+      return err({ type: 'expired' } as E)
+    }
+    return ok(entry.data)
+  }
+
+  async getOrFetch(key: string, fetcher: () => Promise<T>, ttl: number): Promise<Result<T, E>> {
+    const cached = this.get(key)
+    if (cached.isOk()) return cached
+
+    const fetched = await fromPromise(fetcher(), error => ({ type: 'fetch_error', error } as E))
+    if (fetched.isOk()) this.set(key, fetched.value, ttl)
+
+    return fetched
+  }
+
+  set(key: string, data: T, ttl: number): void {
+    this.store.set(key, { data, timestamp: Date.now(), ttl })
+  }
+}
+```
+
+### Example 7: Authentication Workflow
+
+```typescript
+import { match, fromPromise } from '@ts-result'
+
+type AuthError =
+  | { type: 'invalid_token' }
+  | { type: 'expired' }
+  | { type: 'user_not_found' }
+
+async function authenticate(token: string): Promise<Result<User, AuthError>> {
+  const tokenResult = await fromPromise(
+    validateJwt(token),
+    error => ({ type: 'invalid_token' })
+  )
+
+  if (tokenResult.isErr()) return err({ type: 'invalid_token' })
+  const payload = tokenResult.value
+
+  if (payload.exp < Date.now()) return err({ type: 'expired' })
+  return fromPromise(
+    db.findById(payload.userId),
+    error => ({ type: 'user_not_found' })
+  )
+}
+
+async function handleAuth(token: string | null): Promise<User | null> {
+  return match(token)
+    .when((v, p) => p.isNil(v), () => null)
+    .when((v, p) => p.isString(v), async (t) => {
+      const result = await authenticate(t)
+      return result.isOk() ? result.value : null
+    })
+    .default(() => null)
+}
+```
+
+### Example 8: Batch Processing
+
+```typescript
+import { ok, err, all } from '@ts-result'
+
+type ProcessError = { id: string, error: string }
+
+async function processBatch<T, R>(
+  items: T[],
+  processor: (item: T) => Promise<Result<R, ProcessError>>
+): Promise<Result<R[], ProcessError[]>> {
+  const results = await Promise.all(items.map(item => processor(item)))
+
+  const errors = results.filter(r => r.isErr()).map(r => (r as Err<R, ProcessError>).error)
+  const successes = results.filter(r => r.isOk()).map(r => (r as Ok<R, ProcessError>).value)
+
+  if (errors.length > 0) return err(errors)
+  return ok(successes)
+}
+```
+
+## Best Practices
+
+### Error Type Design
+
+Use discriminated unions for type-safe error handling:
+
+```typescript
+// Good
+type AppError =
+  | { type: 'network', code: number, message: string }
+  | { type: 'validation', fields: ValidationError[] }
+  | { type: 'database', table: string, reason: string }
+
+// Bad
+type AppError = string
+```
+
+### When to Use Result vs Option
+
+- **Result**: Operations that can fail with recoverable errors (API calls, I/O, validation)
+- **Option**: Values that may be absent (optional properties, lookups)
+
+### Composition Patterns
+
+Prefer method chaining over manual error checking:
+
+```typescript
+// Good
+const result = ok(data)
+  .map(parse)
+  .andThen(validate)
+  .map(transform)
+
+// Bad
+const parsed = parse(data)
+if (!parsed.ok) return err(parsed.error)
+const validated = validate(parsed.value)
+if (!validated.ok) return err(validated.error)
+return transform(validated.value)
+```
+
+### Performance Considerations
+
+- Result overhead: ~10% vs direct operations
+- Exception overhead: ~50x slower than Result
+- Async overhead: ~10-100x slower than sync (Promise machinery)
+- Bundle size: 8 KB minified, 1.8 KB gzipped
+
+### Migration Strategies
+
+1. **Wrapper Layer**: Create Result wrappers around existing APIs
+2. **Adapter Pattern**: Convert between Result and existing types
+3. **Gradual Adoption**: Migrate module by module
+4. **Boundary Conversion**: Convert at API boundaries
+
+## Common Patterns
+
+### Pipeline Pattern
+
+```typescript
+const result = ok(rawData)
+  .map(parseData)
+  .andThen(validateData)
+  .map(transformData)
+  .andThen(saveData)
+```
+
+### Fallback Pattern
+
+```typescript
+const result = fetchUser(id)
+  .orElse(() => fetchFromCache(id))
+  .orElse(() => createGuestUser(id))
+```
+
+### Collection Pattern
+
+```typescript
+const results = all([
+  validateName(form.name),
+  validateEmail(form.email),
+  validateAge(form.age)
+])
+```
+
+### Alternative Pattern
+
+```typescript
+const data = any([
+  fetchFromPrimary(key),
+  fetchFromSecondary(key),
+  fetchFromCache(key)
+])
+```
+
+## Integration with TypeScript
+
+### Type Inference
+
+Let TypeScript infer types whenever possible:
+
+```typescript
+// Good - inferred
+const result = ok(42)
+
+// Avoid - explicit
+const result: Result<number, string> = ok(42)
+```
+
+### Type Guards
+
+Use type guards for proper narrowing:
+
+```typescript
+result.match({
+  ok: (user) => {
+    // TypeScript knows user is User
+    console.log(user.name)
+  },
+  err: (error) => {
+    // TypeScript knows error is AppError
+    console.error(error.type)
+  }
+})
+```
+
+### Generic Functions
+
+Use type constraints for generic functions:
+
+```typescript
+function validate<T extends { id: string }>(
+  item: T
+): Result<T, ValidationError> {
+  return item.id ? ok(item) : err({ field: 'id', message: 'Required' })
+}
+```
+
+## Testing Strategies
+
+### Test All Paths
+
+```typescript
+describe('processUser', () => {
+  it('should process valid user', () => {
+    const result = processUser(validInput)
+    expect(result.isOk()).toBe(true)
+  })
+
+  it('should reject invalid user', () => {
+    const result = processUser(invalidInput)
+    expect(result.isErr()).toBe(true)
+  })
+})
+```
+
+### Test Error Cases
+
+```typescript
+it('should return network error', async () => {
+  mockFetch.mockRejectedValue(new Error('Network error'))
+  const result = await fetchUser('123')
+  expect(result.isErr()).toBe(true)
+  expect(result.error.type).toBe('network')
+})
+```
+
+## Summary
+
+**Key concepts**:
+- Result\<T, E> for error handling
+- Option\<T> for nullable values
+- Match function for universal pattern matching
+- Built-in predicates for type guards
+- Async support with parallel/sequential execution
+
+**Main benefits**:
+- Type-safe error handling
+- Composable operations
+- Better performance than exceptions
+- Explicit error paths
+- Easy testing
+
+**When to use**:
+- API calls and I/O operations → Result
+- Optional properties and lookups → Option
+- Complex type matching → Match function
+- Async workflows → Async utilities
+
+**Installation**:
+```bash
+npm install @ts-result
+```
+
+**Import**:
+```typescript
+import {
+  ok, err, Result,
+  some, none, Option,
+  match, predicates,
+  fromPromise, tryCatch, all, any
+} from '@ts-result'
+```
+
+For detailed examples, migration guides, and performance benchmarks, see the `docs/` directory.

@@ -1,0 +1,270 @@
+# @ts-result - LLM Quick Reference
+
+**@ts-result** is a TypeScript library providing Rust-inspired `Result<T, E>` and `Option<T>` types for type-safe error handling with universal pattern matching.
+
+## Overview
+
+A modern, zero-dependency TypeScript library for error handling that makes failures explicit and composable. Inspired by Rust's Result and Option types, it provides a type-safe alternative to try/catch and null/undefined handling.
+
+## Key Concepts
+
+### Result\<T, E>
+- **Ok\<T, E>**: Represents success containing a value of type T
+- **Err\<T, E>**: Represents error containing a value of type E
+- Used for operations that can fail with recoverable errors
+
+### Option\<T>
+- **Some\<T>**: Represents a present value of type T
+- **None\<T>**: Represents absence of a value
+- Used for nullable values and optional data
+
+### Match Function
+- Universal pattern matching for any type
+- Supports sync and async predicates
+- Built-in type guards (isString, isNumber, etc.)
+- Execution modes: 'parallel' (default) or 'sequential'
+
+## Quick API Reference
+
+### Result Methods
+
+```typescript
+// State checks
+isOk(): boolean
+isErr(): boolean
+
+// Unwrapping
+unwrap(): T
+unwrapOr(default: T): T
+unwrapOrElse(fn: (error: E) => T): T
+expect(message: string): T
+
+// Transformation
+map<U>(fn: (value: T) => U): Result<U, E>
+mapErr<F>(fn: (error: E) => F): Result<T, F>
+
+// Chaining
+andThen<U>(fn: (value: T) => Result<U, E>): Result<U, E>
+orElse<F>(fn: (error: E) => Result<T, F>): Result<T, F>
+and<U>(res: Result<U, E>): Result<U, E>
+or<F>(res: Result<T, F>): Result<T, F>
+
+// Option conversion
+ok(): Option<T>
+err(): Option<E>
+
+// Pattern matching
+match<U>(pattern: { ok: (value: T) => U, err: (error: E) => U }): U
+
+// Async
+asyncThen<U>(fn: (value: T) => Promise<Result<U, E>>): Promise<Result<U, E>>
+asyncOrElse<F>(fn: (error: E) => Promise<Result<T, F>>): Promise<Result<T, F>>
+```
+
+### Option Methods
+
+```typescript
+// State checks
+isSome(): boolean
+isNone(): boolean
+
+// Unwrapping
+unwrap(): T
+unwrapOr(default: T): T
+unwrapOrElse(fn: () => T): T
+expect(message: string): T
+
+// Transformation
+map<U>(fn: (value: T) => U): Option<U>
+mapOr<U>(default: U, fn: (value: T) => U): U
+mapOrElse<U>(defaultFn: () => U, fn: (value: T) => U): U
+
+// Chaining
+andThen<U>(fn: (value: T) => Option<U>): Option<U>
+or(opt: Option<T>): Option<T>
+orElse(fn: () => Option<T>): Option<T>
+
+// Pattern matching
+match<U>(pattern: { some: (value: T) => U, none: () => U }): U
+```
+
+### Match Function
+
+```typescript
+// Basic usage
+match(value)
+  .when((v, p) => p.isString(v), s => s.toUpperCase())
+  .when((v, p) => p.isNumber(v), n => n * 2)
+  .default(() => 'unknown')
+
+// With options
+match(value, {
+  execution: 'parallel' | 'sequential',  // default: 'parallel'
+  predicates: { ...customPredicates }
+})
+```
+
+### Built-in Predicates
+
+```typescript
+// Type guards
+p.isString(v)        // v is string
+p.isNumber(v)        // v is number
+p.isBoolean(v)       // v is boolean
+p.isNull(v)          // v is null
+p.isUndefined(v)     // v is undefined
+p.isNil(v)           // v is null | undefined
+p.isArray(v)         // v is unknown[]
+p.isFunction(v)      // v is function
+p.isObject(v)        // v is object
+p.isPromise(v)       // v is Promise<unknown>
+p.isDate(v)          // v is Date
+p.isRegExp(v)        // v is RegExp
+
+// Result/Option guards
+p.isOk(v)           // v is Result<unknown, unknown>
+p.isErr(v)          // v is Result<unknown, unknown>
+p.isSome(v)          // v is Option<unknown>
+p.isNone(v)          // v is Option<unknown>
+
+// Utility predicates
+p.isTruthy(v)        // boolean
+p.isFalsy(v)         // boolean
+p.isEmpty(v)         // boolean
+```
+
+### Utility Functions
+
+```typescript
+// Result utilities
+ok<T, E>(value: T): Result<T, E>
+err<T, E>(error: E): Result<T, E>
+tryCatch<T, E = Error>(fn: () => T): Result<T, E>
+all<T, E>(results: Result<T, E>[]): Result<T[], E>
+any<T, E>(results: Result<T, E>[]): Result<T, E>
+
+// Option utilities
+some<T>(value: T): Option<T>
+none<T>(): Option<T>
+fromNullable<T>(value: T | null | undefined): Option<T>
+toNullable<T>(option: Option<T>): T | null
+fromArray<T>(array: T[]): Option<[T, ...T[]]>
+toArray<T>(option: Option<T>): T[]
+
+// Async utilities
+fromPromise<T, E>(promise: Promise<T>, errorMapper: (error: unknown) => E): Promise<Result<T, E>>
+toPromise<T, E>(result: Promise<Result<T, E>>): Promise<T>
+toPromiseOr<T, E>(result: Promise<Result<T, E>>, defaultValue: T): Promise<T>
+```
+
+## Common Patterns
+
+### API Error Handling
+
+```typescript
+import { ok, err, fromPromise } from '@ts-result'
+
+async function fetchUser(id: string): Result<User, ApiError> {
+  return fromPromise(
+    fetch(`/api/users/${id}`),
+    error => ({ type: 'network', message: error.message })
+  ).andThen(async (res) => {
+    if (!res.ok) return err({ type: 'not_found', message: 'User not found' })
+    return fromPromise(
+      res.json(),
+      error => ({ type: 'parse', message: error.message })
+    )
+  })
+}
+```
+
+### Form Validation
+
+```typescript
+import { ok, err, all } from '@ts-result'
+
+function validateForm(form: FormData): Result<ValidForm, ValidationError[]> {
+  return all([
+    validateEmail(form.email),
+    validatePassword(form.password),
+    validateAge(form.age)
+  ]).mapErr(errors => errors.filter(e => e !== undefined))
+}
+```
+
+### Nullable Handling
+
+```typescript
+import { some, none, fromNullable, match } from '@ts-result'
+
+const user = fromNullable(getUser())
+  .map(u => u.name)
+  .unwrapOr('Guest')
+```
+
+### Match Patterns
+
+```typescript
+import { match } from '@ts-result'
+
+const result = match(value)
+  .when((v, p) => p.isString(v), s => s.toUpperCase())
+  .when((v, p) => p.isNumber(v), n => n * 2)
+  .default(() => 'unknown')
+```
+
+### Async Workflows
+
+```typescript
+import { fromPromise, match } from '@ts-result'
+
+const result = await match(data, { execution: 'parallel' })
+  .when(async (v, p) => await validate(v), v => v.id)
+  .when((v, p) => p.isNil(v), () => null)
+  .default(() => 'invalid')
+```
+
+## Benefits vs try/catch
+
+- **Type Safety**: Explicit error types, no any
+- **Composability**: Chain operations with andThen/map
+- **Predictability**: No exceptions for expected errors
+- **Performance**: ~50x faster than exception throwing
+- **Testability**: Easy to test both success and error paths
+
+## When to Use
+
+**Result\<T, E>**: Use when operations can fail with recoverable errors
+- API calls
+- File I/O
+- Database operations
+- Validation
+
+**Option\<T>**: Use when values may be absent
+- Optional properties
+- Lookups that return nothing
+- Optional configuration
+
+## Installation
+
+```bash
+npm install @ts-result
+bun add @ts-result
+yarn add @ts-result
+pnpm add @ts-result
+```
+
+## Import
+
+```typescript
+import {
+  ok, err, Result,
+  some, none, Option,
+  match, predicates,
+  fromPromise, tryCatch, all, any
+} from '@ts-result'
+```
+
+---
+
+For complete API documentation, examples, and best practices, see `docs/` directory.
