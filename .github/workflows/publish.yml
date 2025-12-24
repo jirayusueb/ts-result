@@ -17,22 +17,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: "pnpm"
+      - uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun install
+
       - name: Update npm
-        run: npm install -g npm@latest # Ensure npm is up-to-date. Provenance requires v9.6.0 or higher.
+        run: bunx npm install -g npm@latest # Ensure npm is up-to-date. Provenance requires v9.6.0 or higher.
       - name: Build
-        run: pnpm run build
+        run: bun run build
       - name: Test
-        run: pnpm run test
+        run: bun test
 
       # if the release is not a pre-release, publish to npm as latest
       - name: Publish
