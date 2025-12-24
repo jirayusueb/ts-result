@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
-  ok,
-  err,
-  match,
-  fromPromise,
-  tryCatch,
   all,
   any,
-  some,
-  none,
-  fromNullable,
-  toNullable,
+  err,
   fromArray,
-  toArray
+  fromNullable,
+  fromPromise,
+  match,
+  none,
+  ok,
+  some,
+  toArray,
+  toNullable,
+  tryCatch
 } from "./index.js";
 
 describe("Result<T, E>", () => {

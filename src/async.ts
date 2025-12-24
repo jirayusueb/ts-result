@@ -1,5 +1,5 @@
 import type { Result } from "./result.js";
-import { ok, err } from "./result.js";
+import { err, ok } from "./result.js";
 
 export async function fromPromise<T, E>(
   promise: Promise<T>,

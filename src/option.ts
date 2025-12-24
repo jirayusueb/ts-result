@@ -15,11 +15,11 @@ export class Some<T> {
     return this.value;
   }
 
-  unwrapOr(_: T): T {
+  unwrapOr(_defaultValue: T): T {
     return this.value;
   }
 
-  unwrapOrElse(_: () => T): T {
+  unwrapOrElse(_defaultFn: () => T): T {
     return this.value;
   }
 
@@ -31,11 +31,11 @@ export class Some<T> {
     return some(fn(this.value));
   }
 
-  mapOr<U>(_: U, fn: (value: T) => U): U {
+  mapOr<U>(_defaultValue: U, fn: (value: T) => U): U {
     return fn(this.value);
   }
 
-  mapOrElse<U>(_: () => U, fn: (value: T) => U): U {
+  mapOrElse<U>(_defaultFn: () => U, fn: (value: T) => U): U {
     return fn(this.value);
   }
 
@@ -75,27 +75,27 @@ export class None<T> {
     return defaultValue;
   }
 
-  unwrapOrElse(fn: () => T): T {
-    return fn();
+  unwrapOrElse(defaultFn: () => T): T {
+    return defaultFn();
   }
 
   expect(message: string): T {
     throw new Error(message);
   }
 
-  map<U>(_: (value: T) => U): Option<U> {
+  map<U>(_value: (value: T) => U): Option<U> {
     return this as unknown as Option<U>;
   }
 
-  mapOr<U>(defaultValue: U, _: (value: T) => U): U {
+  mapOr<U>(defaultValue: U, _value: (value: T) => U): U {
     return defaultValue;
   }
 
-  mapOrElse<U>(defaultFn: () => U, _: (value: T) => U): U {
+  mapOrElse<U>(defaultFn: () => U, _value: (value: T) => U): U {
     return defaultFn();
   }
 
-  andThen<U>(_: (value: T) => Option<U>): Option<U> {
+  andThen<U>(_value: (value: T) => Option<U>): Option<U> {
     return this as unknown as Option<U>;
   }
 
@@ -103,8 +103,8 @@ export class None<T> {
     return opt;
   }
 
-  orElse(fn: () => Option<T>): Option<T> {
-    return fn();
+  orElse(defaultFn: () => Option<T>): Option<T> {
+    return defaultFn();
   }
 
   match<U>(pattern: { some: (value: T) => U; none: () => U }): U {

@@ -1,5 +1,5 @@
 import type { Option } from "./option.js";
-import { some, none } from "./option.js";
+import { none, some } from "./option.js";
 
 export class Ok<T, E> {
   readonly _: "ok" = "ok";

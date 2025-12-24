@@ -1,7 +1,7 @@
-import type { Result } from "./result.js";
 import type { Option } from "./option.js";
-import { ok, err } from "./result.js";
-import { some, none } from "./option.js";
+import { none, some } from "./option.js";
+import type { Result } from "./result.js";
+import { err, ok } from "./result.js";
 
 export function tryCatch<T, E = Error>(fn: () => T): Result<T, E> {
   try {
