@@ -1,6 +1,6 @@
 {
   "name": "@ts-result",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Rust-inspired Result<T, E> and Option<T> types with universal pattern matching for error handling in TypeScript",
   "author": "Jirayu Sueb <github@jirayusueb.com>",
   "publishConfig": {
